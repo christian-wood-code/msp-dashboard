@@ -1,0 +1,10 @@
+{
+  "name": "jarvis-dashboard",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Per-person MSP/EUC dashboard: Microsoft 365 calendar/inbox/to-do/chats via direct sign-in, plus a live personal Autotask ticket queue.",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  }
+}
