@@ -314,17 +314,21 @@ async function load() {
     .then(r => { if (!r) return; DATA.mail = r.value || []; setCount("inbox", DATA.mail.filter(m => !m.isRead).length); })
     .catch(e => { boom("inbox", e); DATA.err.inbox = e.message; setCount("inbox", "!"); });
 
-  const pTodo = (async () => {
-    const lists = await graph(`/me/todo/lists`);
-    if (!lists) return;
-    const all = [];
-    for (const list of lists.value || []) {
-      const tasks = await graph(`/me/todo/lists/${list.id}/tasks?$filter=status ne 'completed'&$select=title,dueDateTime,importance,status`);
-      all.push(...(tasks?.value || []));
-    }
-    DATA.todo = all;
-    setCount("tasks", DATA.todo.length);
-  })().catch(e => { boom("tasks", e); DATA.err.tasks = e.message; setCount("tasks", "!"); });
+  // Fetching /me/todo/lists/{id}/tasks with the list id spliced into the URL
+  // path fails outright — confirmed 2026-09 against a real mailbox, 400
+  // "RequestBroker--ParseUri" even with the id correctly percent-encoded and
+  // every query param removed. Some Outlook/To Do resource ids trip up
+  // Graph's gateway when placed in a path segment. Fixed by never putting
+  // the id in a path at all: $expand=tasks pulls each list's tasks inline
+  // via a single /me/todo/lists request instead.
+  const pTodo = graph(`/me/todo/lists?$select=id&$expand=tasks($select=title,dueDateTime,importance,status)`)
+    .then(r => {
+      if (!r) return;
+      const all = (r.value || []).flatMap(list => list.tasks || []);
+      DATA.todo = all.filter(t => t.status !== "completed");
+      setCount("tasks", DATA.todo.length);
+    })
+    .catch(e => { boom("tasks", e); DATA.err.tasks = e.message; setCount("tasks", "!"); });
 
   const pChats = graph(`/me/chats?$top=15&$expand=lastMessagePreview&$orderby=lastMessagePreview/createdDateTime desc`)
     .then(r => { if (!r) return; DATA.chats = (r.value || []).filter(c => c.lastMessagePreview); setCount("teams", DATA.chats.length); })
