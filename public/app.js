@@ -124,9 +124,10 @@ const SECTIONS = [
   { key: "teams",    label: "Chats",      glyph: "◉", c: "#33e08a", ...hexPoint(5) }
 ];
 const DATA = { today: [], upcoming: [], mail: [], todo: [], chats: [], queue: null, err: {} };
+// Always opens on Today, deliberately not remembered across visits — a new
+// sign-in (or reload) should show what's happening now, not wherever the
+// dial was last left.
 let ACTIVE = "today";
-try { ACTIVE = localStorage.getItem("jarvis.section") || "today"; } catch (e) {}
-if (!SECTIONS.some(s => s.key === ACTIVE)) ACTIVE = "today";
 
 const dial = el("dial");
 for (const s of SECTIONS) {
@@ -147,7 +148,6 @@ document.addEventListener("keydown", e => {
 });
 function select(key) {
   ACTIVE = key;
-  try { localStorage.setItem("jarvis.section", key); } catch (e) {}
   dial.querySelectorAll(".lobe").forEach(b => b.setAttribute("aria-selected", String(b.dataset.key === key)));
   paint();
 }
