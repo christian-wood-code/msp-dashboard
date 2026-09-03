@@ -306,8 +306,12 @@ async function load() {
     .then(r => {
       if (!r) return;
       const events = r.value || [];
-      DATA.today = events.filter(e => { const d = toDate(e.start?.dateTime); return d && sameDay(d, now); });
-      DATA.upcoming = events.filter(e => { const d = toDate(e.start?.dateTime); return d && d > now && !sameDay(d, now); }).slice(0, 10);
+      // "Today" is a morning-only readout: 12am-12pm. A same-day event after
+      // noon isn't dropped, just moved into "Coming Up" instead, so nothing
+      // on the real calendar disappears — it just isn't called "today".
+      const isThisMorning = d => sameDay(d, now) && d.getHours() < 12;
+      DATA.today = events.filter(e => { const d = toDate(e.start?.dateTime); return d && isThisMorning(d); });
+      DATA.upcoming = events.filter(e => { const d = toDate(e.start?.dateTime); return d && d > now && !isThisMorning(d); }).slice(0, 10);
       setCount("today", DATA.today.filter(e => !e.isCancelled).length);
       setCount("upcoming", DATA.upcoming.length);
     })
