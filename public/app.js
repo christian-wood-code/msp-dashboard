@@ -104,7 +104,8 @@ function toDate(dt) {
     '<div class="cloc">AUCKLAND NZ</div>' +
     '<div class="ctime">' + esc(now.toLocaleTimeString("en-NZ", { hour: "numeric", minute: "2-digit", second: "2-digit", hour12: true }).replace(/\s*(am|pm|AM|PM)$/, m => " " + m.trim().toLowerCase())) + '</div>' +
     '<div class="cdate">' + esc(now.toLocaleDateString([], { weekday: "short", day: "numeric", month: "short" })) + '</div>' +
-    '<div class="cname">' + esc(greet + (account ? ", " + (account.name || "").split(" ")[0] : "")) + '</div>';
+    '<div class="cgreet">' + esc(greet + (account ? "," : "")) + '</div>' +
+    (account ? '<div class="cname">' + esc((account.name || "").split(" ")[0]) + '</div>' : '');
   setTimeout(tick, 1000);
 })();
 
