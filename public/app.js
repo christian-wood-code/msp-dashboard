@@ -214,8 +214,13 @@ function todoRows() {
 }
 function chatRows() {
   if (!DATA.chats.length) return '<div class="empty">No recent chat activity.</div>';
+  const me = (account?.username || "").toLowerCase();
   return DATA.chats.map(c => {
-    const title = c.topic || (c.members || []).filter(m => !m.own).map(m => m.displayName).join(", ") || "Chat";
+    // Channel name for a named group chat, otherwise the other person/people's
+    // name(s) — excluding yourself by comparing each member's email against
+    // your own signed-in account (Graph chat members have no "own" flag).
+    const others = (c.members || []).filter(m => (m.email || "").toLowerCase() !== me);
+    const title = c.topic || others.map(m => m.displayName).filter(Boolean).join(", ") || "Chat";
     const preview = c.lastMessagePreview;
     const when = preview?.createdDateTime ? new Date(preview.createdDateTime) : null;
     const snip = (preview?.body?.content || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 64);
@@ -354,7 +359,7 @@ async function load() {
     })
     .catch(e => { boom("tasks", e); DATA.err.tasks = e.message; setCount("tasks", "!"); });
 
-  const pChats = graph(`/me/chats?$top=15&$expand=lastMessagePreview&$orderby=lastMessagePreview/createdDateTime desc`)
+  const pChats = graph(`/me/chats?$top=15&$select=id,topic,chatType&$expand=members,lastMessagePreview&$orderby=lastMessagePreview/createdDateTime desc`)
     .then(r => { if (!r) return; DATA.chats = (r.value || []).filter(c => c.lastMessagePreview); setCount("teams", DATA.chats.length); })
     .catch(e => { boom("teams", e); DATA.err.teams = e.message; setCount("teams", "!"); });
 
