@@ -92,7 +92,15 @@ function ago(d) {
 // treat them as wall-clock NZ time rather than re-interpreting as UTC.
 function toDate(dt) {
   if (!dt) return null;
-  const d = new Date(dt.replace(" ", "T") + (/[zZ]|[+-]\d{2}:\d{2}$/.test(dt) ? "" : ""));
+  // Graph's calendarView returns start/end.dateTime in UTC with NO "Z" or
+  // offset suffix (e.g. "2026-09-03T01:00:00.0000000") since no
+  // Prefer:outlook.timezone header is sent. Without appending "Z" here,
+  // `new Date(...)` parses that string as *local* time instead of UTC --
+  // a 1pm NZT meeting (1am UTC) then displays as "1:00am", a 12-hour flip.
+  // Confirmed against a real mailbox, 2026-09.
+  let s = dt.replace(" ", "T").replace(/(\.\d{3})\d+$/, "$1"); // trim Graph's 7-digit fractional seconds — extra digits make Date parsing fail
+  if (!/[zZ]|[+-]\d{2}:\d{2}$/.test(s)) s += "Z";
+  const d = new Date(s);
   return isNaN(d) ? null : d;
 }
 
