@@ -73,8 +73,18 @@ exports.handler = async (event) => {
       openByResource.get(rid).push(t);
     });
 
-    const queueUrl = (resourceId) =>
-      `${webUrl}/Mvc/ServiceDesk/TicketGrid.mvc?searchType=queue&assignedResourceId=${resourceId}`;
+    // "My queue" in the Autotask web UI isn't parameterized by resource id at
+    // all — it's tied to whoever is logged into that Autotask session, e.g.
+    // https://ww29.autotask.net/AutotaskOnyx/LandingPage?view=my-tasks-and-tickets&view-data=<base64 of
+    // {"url":"https://ww29.autotask.net/Mvc/ServiceDesk/MyWorkspace.mvc/MyTaskAndTicket"}>
+    // (confirmed against a real copied URL, 2026-09). Same URL for every
+    // viewer, works because each person is signed into their own Autotask
+    // session in their own browser. There is deliberately no per-resource
+    // equivalent below — Autotask exposes no URL to open *someone else's*
+    // queue, so team rows get a count only, no broken deep link.
+    const myWorkspaceUrl =
+      `${webUrl}/AutotaskOnyx/LandingPage?view=my-tasks-and-tickets&view-data=` +
+      encodeURIComponent(Buffer.from(JSON.stringify({ url: `${webUrl}/Mvc/ServiceDesk/MyWorkspace.mvc/MyTaskAndTicket` })).toString('base64'));
 
     const now = new Date();
     const todayKey = nzDateKey(now);
@@ -89,8 +99,7 @@ exports.handler = async (event) => {
       .filter(r => r.id !== myResource?.id)
       .map(r => ({
         name: (r.firstName || '').trim() || `Resource #${r.id}`,
-        openCount: (openByResource.get(r.id) || []).length,
-        queueUrl: queueUrl(r.id)
+        openCount: (openByResource.get(r.id) || []).length
       }))
       .filter(r => r.openCount > 0)
       .sort((a, b) => b.openCount - a.openCount);
@@ -101,7 +110,7 @@ exports.handler = async (event) => {
       body: JSON.stringify({
         me: { name: me.displayName, matched: Boolean(myResource) },
         mine: myResource ? {
-          queueUrl: queueUrl(myResource.id),
+          queueUrl: myWorkspaceUrl,
           openCount: mine.length,
           overdue: grouped.overdue,
           dueToday: grouped.dueToday,

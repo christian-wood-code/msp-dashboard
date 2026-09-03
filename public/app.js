@@ -237,12 +237,14 @@ function queueRows() {
     ? `<div class="row"><div class="tick ok"></div><div class="rmain"><div class="rtitle">Queue clear <span class="pill ok">0 OPEN</span></div></div></div>`
     : section("Overdue", "stale", mine.overdue) + section("Due today", "act", mine.dueToday) + section("Open", "", mine.rest);
 
+  // Autotask exposes no URL to open someone else's queue (its "my queue" view
+  // is tied to whichever session is logged in, not a resource id) — so
+  // teammate rows show a count only, deliberately no link.
   const teamHtml = !q.team.length ? "" : '<div class="divider">Team queues</div>' + q.team.map(r => `
     <div class="row">
       <div class="tick ${r.openCount > 10 ? "stale" : r.openCount > 4 ? "act" : ""}"></div>
       <div class="counts"><div class="stat"><b>${r.openCount}</b><span>Open</span></div></div>
       <div class="rmain"><div class="rtitle">${esc(r.name)}</div></div>
-      <a class="open-link" href="${esc(r.queueUrl)}" target="_blank" rel="noopener">OPEN ▸</a>
     </div>`).join("");
 
   return `<a class="open-link" style="margin:12px 15px;display:inline-block" href="${esc(mine.queueUrl)}" target="_blank" rel="noopener">OPEN MY QUEUE IN AUTOTASK ▸</a>` + mineHtml + teamHtml;
