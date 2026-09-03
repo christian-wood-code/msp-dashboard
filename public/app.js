@@ -179,9 +179,9 @@ function mailRows() {
   return DATA.mail.map(m => {
     const d = m.receivedDateTime ? new Date(m.receivedDateTime) : null;
     return `<div class="row">
-      <div class="tick ${m.isRead ? "" : "act"}"></div>
+      <div class="tick ${m.importance === "high" ? "act" : ""}"></div>
       <div class="rmain">
-        <div class="rtitle">${!m.isRead ? '<span class="pill new">NEW</span>' : ""}<a href="${esc(m.webLink || "#")}" target="_blank" rel="noopener">${esc(m.subject || "(no subject)")}</a></div>
+        <div class="rtitle">${m.importance === "high" ? '<span class="pill act">! IMPORTANT</span>' : ""}${!m.isRead ? '<span class="pill new">NEW</span>' : ""}<a href="${esc(m.webLink || "#")}" target="_blank" rel="noopener">${esc(m.subject || "(no subject)")}</a></div>
         <div class="rmeta">${esc(m.from?.emailAddress?.name || "?")} · ${d ? esc(ago(d)) : ""}</div>
       </div></div>`;
   }).join("");
@@ -310,8 +310,17 @@ async function load() {
     })
     .catch(e => { boom("calendar", e); DATA.err.today = DATA.err.upcoming = e.message; setCount("today", "!"); setCount("upcoming", "!"); });
 
-  const pMail = graph(`/me/mailFolders/Inbox/messages?$top=25&$orderby=receivedDateTime desc&$select=subject,from,receivedDateTime,isRead,webLink`)
-    .then(r => { if (!r) return; DATA.mail = r.value || []; setCount("inbox", DATA.mail.filter(m => !m.isRead).length); })
+  const pMail = graph(`/me/mailFolders/Inbox/messages?$top=25&$orderby=receivedDateTime desc&$select=subject,from,receivedDateTime,isRead,webLink,importance`)
+    .then(r => {
+      if (!r) return;
+      // Important-flagged mail first, then newest-first within each group —
+      // Graph's own $orderby can't express "important first" so this is
+      // done client-side after the (already newest-first) fetch.
+      DATA.mail = (r.value || []).slice().sort((a, b) =>
+        (b.importance === "high") - (a.importance === "high") ||
+        new Date(b.receivedDateTime) - new Date(a.receivedDateTime));
+      setCount("inbox", DATA.mail.filter(m => !m.isRead).length);
+    })
     .catch(e => { boom("inbox", e); DATA.err.inbox = e.message; setCount("inbox", "!"); });
 
   // Fetching /me/todo/lists/{id}/tasks with the list id spliced into the URL
